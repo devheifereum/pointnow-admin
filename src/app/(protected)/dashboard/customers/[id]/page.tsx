@@ -396,4 +396,3 @@ export default function CustomerDetailPage() {
     </div>
   )
 }
-

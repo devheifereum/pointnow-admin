@@ -110,8 +110,8 @@ export function clearTokens() {
  */
 export function storeUserData(userData: LoginResponse['data']) {
   if (typeof window !== 'undefined') {
-    // Don't store password or tokens in user data
-    const { password, backendTokens, ...safeUserData } = userData
+    // Don't store tokens in user data
+    const { backendTokens, ...safeUserData } = userData
     localStorage.setItem('user_data', JSON.stringify(safeUserData))
   }
 }
@@ -148,5 +148,6 @@ export function isAuthenticated(): boolean {
 
   return true
 }
+
 
 

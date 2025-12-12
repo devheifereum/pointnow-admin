@@ -92,7 +92,12 @@ const getDefaultDateRange = (): DateRange => {
 
 export default function CustomersPage() {
   const router = useRouter()
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(getDefaultDateRange())
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined)
+  
+  // Set default date range on client side only to avoid hydration mismatch
+  React.useEffect(() => {
+    setDateRange(getDefaultDateRange())
+  }, [])
   const [metrics, setMetrics] = React.useState<CustomerMetrics | null>(null)
   const [customersData, setCustomersData] = React.useState<CustomersData | null>(null)
   const [isLoadingMetrics, setIsLoadingMetrics] = React.useState(true)

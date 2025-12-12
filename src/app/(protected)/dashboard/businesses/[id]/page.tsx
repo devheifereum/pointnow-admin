@@ -91,7 +91,12 @@ export default function BusinessDetailPage() {
   const [isLoadingBusiness, setIsLoadingBusiness] = React.useState(true)
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(getDefaultDateRange())
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined)
+  
+  // Set default date range on client side only to avoid hydration mismatch
+  React.useEffect(() => {
+    setDateRange(getDefaultDateRange())
+  }, [])
   const [leaderboardPage, setLeaderboardPage] = React.useState(1)
   const [leaderboardMetadata, setLeaderboardMetadata] = React.useState<{
     total: number
@@ -517,3 +522,4 @@ export default function BusinessDetailPage() {
     </div>
   )
 }
+

@@ -48,7 +48,12 @@ const getDefaultDateRange = (): DateRange => {
 }
 
 export default function DashboardPage() {
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(getDefaultDateRange())
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined)
+  
+  // Set default date range on client side only to avoid hydration mismatch
+  React.useEffect(() => {
+    setDateRange(getDefaultDateRange())
+  }, [])
   const [historicalData, setHistoricalData] = React.useState<RevenueHistoricalDataPoint[]>([])
   const [isLoadingHistorical, setIsLoadingHistorical] = React.useState(true)
   const [metrics, setMetrics] = React.useState<DashboardMetrics>({
@@ -211,91 +216,91 @@ export default function DashboardPage() {
       {/* Overview Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {(isLoadingMetrics || metrics.total_revenue !== null) && (
-          <Card className="@container/card">
-            <CardHeader>
+        <Card className="@container/card">
+          <CardHeader>
               <CardDescription>Total Revenue</CardDescription>
               {isLoadingMetrics ? (
                 <Skeleton className="h-8 w-32" />
               ) : metrics.total_revenue !== null ? (
-                <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+            <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
                   RM {metrics.total_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </CardTitle>
+            </CardTitle>
               ) : null}
-            </CardHeader>
+          </CardHeader>
             <CardFooter className="text-xs text-muted-foreground">
               Total revenue
-            </CardFooter>
-          </Card>
+          </CardFooter>
+        </Card>
         )}
 
         {(isLoadingMetrics || metrics.total_businesses !== null) && (
-          <Card className="@container/card">
-            <CardHeader>
-              <CardDescription>Total Businesses</CardDescription>
+        <Card className="@container/card">
+          <CardHeader>
+            <CardDescription>Total Businesses</CardDescription>
               {isLoadingMetrics ? (
                 <Skeleton className="h-8 w-32" />
               ) : metrics.total_businesses !== null ? (
-                <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                  {metrics.total_businesses.toLocaleString()}
-                </CardTitle>
+            <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+              {metrics.total_businesses.toLocaleString()}
+            </CardTitle>
               ) : null}
-            </CardHeader>
+          </CardHeader>
             <CardFooter className="text-xs text-muted-foreground">
               Registered businesses
-            </CardFooter>
-          </Card>
+          </CardFooter>
+        </Card>
         )}
 
         {(isLoadingMetrics || metrics.total_customers !== null) && (
-          <Card className="@container/card">
-            <CardHeader>
-              <CardDescription>Total Customers</CardDescription>
+        <Card className="@container/card">
+          <CardHeader>
+            <CardDescription>Total Customers</CardDescription>
               {isLoadingMetrics ? (
                 <Skeleton className="h-8 w-32" />
               ) : metrics.total_customers !== null ? (
-                <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                  {metrics.total_customers.toLocaleString()}
-                </CardTitle>
+            <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+              {metrics.total_customers.toLocaleString()}
+            </CardTitle>
               ) : null}
-            </CardHeader>
+          </CardHeader>
             <CardFooter className="text-xs text-muted-foreground">
               Across all businesses
-            </CardFooter>
-          </Card>
+          </CardFooter>
+        </Card>
         )}
 
         {(isLoadingMetrics || metrics.active_subscriptions !== null) && (
-          <Card className="@container/card">
-            <CardHeader>
-              <CardDescription>Active Subscriptions</CardDescription>
+        <Card className="@container/card">
+          <CardHeader>
+            <CardDescription>Active Subscriptions</CardDescription>
               {isLoadingMetrics ? (
                 <Skeleton className="h-8 w-32" />
               ) : metrics.active_subscriptions !== null ? (
-                <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                  {metrics.active_subscriptions.toLocaleString()}
-                </CardTitle>
+            <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+              {metrics.active_subscriptions.toLocaleString()}
+            </CardTitle>
               ) : null}
-            </CardHeader>
+          </CardHeader>
             <CardFooter className="text-xs text-muted-foreground">
               Active subscriptions
-            </CardFooter>
-          </Card>
+          </CardFooter>
+        </Card>
         )}
       </div>
 
       {/* Revenue Historical Chart */}
-      <Card>
-        <CardHeader>
+        <Card>
+          <CardHeader>
           <CardTitle>Revenue Historical Data</CardTitle>
           <CardDescription>
             Revenue trends over time
           </CardDescription>
-        </CardHeader>
+          </CardHeader>
         <CardContent>
           {isLoadingHistorical ? (
             <div className="flex items-center justify-center h-64">
               <Skeleton className="h-64 w-full" />
-            </div>
+                </div>
           ) : error ? (
             <div className="flex items-center justify-center h-64 text-destructive">
               {error}
@@ -361,7 +366,7 @@ export default function DashboardPage() {
             </ChartContainer>
           )}
         </CardContent>
-      </Card>
+        </Card>
     </div>
   )
 }

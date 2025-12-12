@@ -172,7 +172,12 @@ const getDefaultDateRange = (): DateRange => {
 
 export default function BusinessesPage() {
   const router = useRouter()
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(getDefaultDateRange())
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined)
+  
+  // Set default date range on client side only to avoid hydration mismatch
+  React.useEffect(() => {
+    setDateRange(getDefaultDateRange())
+  }, [])
   const [businessesData, setBusinessesData] = React.useState<BusinessesData | null>(null)
   const [businessMetrics, setBusinessMetrics] = React.useState<BusinessMetrics | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
@@ -392,32 +397,32 @@ export default function BusinessesPage() {
 
     return transformedBusinesses.filter((item) => {
       // Search is handled server-side, but we can do additional client-side filtering
-      const matchesStatus = statusFilter === "all" || item.subscription.status === statusFilter
-      const matchesActive = 
-        activeFilter === "all" || 
-        (activeFilter === "active" && item.business.is_active) ||
-        (activeFilter === "inactive" && !item.business.is_active)
-      
-      // Filter by created date range
-      const createdDate = parseISO(item.business.created_at)
-      const matchesCreatedDate = !createdDateRange?.from || (
-        isWithinInterval(createdDate, {
-          start: createdDateRange.from,
-          end: createdDateRange.to || createdDateRange.from
-        })
-      )
-      
-      // Filter by subscription end date range
-      const matchesEndDate = !subscriptionEndRange?.from || (
-        item.subscription.end_date && 
-        isWithinInterval(parseISO(item.subscription.end_date), {
-          start: subscriptionEndRange.from,
-          end: subscriptionEndRange.to || subscriptionEndRange.from
-        })
-      )
-      
+    const matchesStatus = statusFilter === "all" || item.subscription.status === statusFilter
+    const matchesActive = 
+      activeFilter === "all" || 
+      (activeFilter === "active" && item.business.is_active) ||
+      (activeFilter === "inactive" && !item.business.is_active)
+    
+    // Filter by created date range
+    const createdDate = parseISO(item.business.created_at)
+    const matchesCreatedDate = !createdDateRange?.from || (
+      isWithinInterval(createdDate, {
+        start: createdDateRange.from,
+        end: createdDateRange.to || createdDateRange.from
+      })
+    )
+    
+    // Filter by subscription end date range
+    const matchesEndDate = !subscriptionEndRange?.from || (
+      item.subscription.end_date && 
+      isWithinInterval(parseISO(item.subscription.end_date), {
+        start: subscriptionEndRange.from,
+        end: subscriptionEndRange.to || subscriptionEndRange.from
+      })
+    )
+    
       return matchesStatus && matchesActive && matchesCreatedDate && matchesEndDate
-    })
+  })
   }, [transformedBusinesses, statusFilter, activeFilter, createdDateRange, subscriptionEndRange])
 
   const getStatusBadge = (status: string) => {
@@ -515,9 +520,9 @@ export default function BusinessesPage() {
             {isLoadingMetrics ? (
               <Skeleton className="h-8 w-32" />
             ) : (
-              <CardTitle className="text-2xl font-semibold tabular-nums">
-                {businessesOverview.total_businesses}
-              </CardTitle>
+            <CardTitle className="text-2xl font-semibold tabular-nums">
+              {businessesOverview.total_businesses}
+            </CardTitle>
             )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
@@ -531,9 +536,9 @@ export default function BusinessesPage() {
             {isLoading ? (
               <Skeleton className="h-8 w-32" />
             ) : (
-              <CardTitle className="text-2xl font-semibold tabular-nums">
-                {businessesOverview.active_businesses}
-              </CardTitle>
+            <CardTitle className="text-2xl font-semibold tabular-nums">
+              {businessesOverview.active_businesses}
+            </CardTitle>
             )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
@@ -547,9 +552,9 @@ export default function BusinessesPage() {
             {isLoading ? (
               <Skeleton className="h-8 w-32" />
             ) : (
-              <CardTitle className="text-2xl font-semibold tabular-nums">
-                {businessesOverview.new_businesses}
-              </CardTitle>
+            <CardTitle className="text-2xl font-semibold tabular-nums">
+              {businessesOverview.new_businesses}
+            </CardTitle>
             )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
@@ -563,9 +568,9 @@ export default function BusinessesPage() {
             {isLoading ? (
               <Skeleton className="h-8 w-32" />
             ) : (
-              <CardTitle className="text-2xl font-semibold tabular-nums">
-                {businessesOverview.businesses_with_subscription}
-              </CardTitle>
+            <CardTitle className="text-2xl font-semibold tabular-nums">
+              {businessesOverview.businesses_with_subscription}
+            </CardTitle>
             )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
@@ -579,9 +584,9 @@ export default function BusinessesPage() {
             {isLoading ? (
               <Skeleton className="h-8 w-32" />
             ) : (
-              <CardTitle className="text-2xl font-semibold tabular-nums">
-                {businessesOverview.businesses_without_subscription}
-              </CardTitle>
+            <CardTitle className="text-2xl font-semibold tabular-nums">
+              {businessesOverview.businesses_without_subscription}
+            </CardTitle>
             )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">

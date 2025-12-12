@@ -25,9 +25,9 @@ export async function apiRequest<T>(
 ): Promise<T> {
   const token = await getAccessToken()
   
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string> || {}),
   }
 
   if (token) {
@@ -73,5 +73,6 @@ export async function apiRequestViaRoute<T>(
 
   return response.json()
 }
+
 
 

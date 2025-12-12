@@ -89,7 +89,12 @@ const getDefaultDateRange = (): DateRange => {
 }
 
 export default function RevenuePage() {
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(getDefaultDateRange())
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined)
+  
+  // Set default date range on client side only to avoid hydration mismatch
+  React.useEffect(() => {
+    setDateRange(getDefaultDateRange())
+  }, [])
   const [metrics, setMetrics] = React.useState<RevenueMetrics | null>(null)
   const [charges, setCharges] = React.useState<ChargesData | null>(null)
   const [isLoadingMetrics, setIsLoadingMetrics] = React.useState(true)
