@@ -130,7 +130,7 @@ export function getUserData(): LoginResponse['data'] | null {
 }
 
 /**
- * Check if user is authenticated
+ * Check if user is authenticated (client-side)
  */
 export function isAuthenticated(): boolean {
   const token = getAccessToken()
@@ -147,6 +147,21 @@ export function isAuthenticated(): boolean {
   }
 
   return true
+}
+
+/**
+ * Check if user is authenticated (server-side)
+ * Checks for access_token in cookies
+ */
+export async function isAuthenticatedServer(): Promise<boolean> {
+  if (typeof window !== 'undefined') {
+    // Client-side: use the client function
+    return isAuthenticated()
+  }
+  
+  // Server-side: would need to be called from a server component with cookies
+  // This is a placeholder - actual implementation should use cookies() from next/headers
+  return false
 }
 
 

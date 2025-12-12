@@ -1,4 +1,6 @@
 import { Metadata } from "next"
+import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { FieldDescription } from "@/components/ui/field"
@@ -9,7 +11,14 @@ export const metadata: Metadata = {
   description: "Sign in to PointNow Admin Dashboard",
 }
 
-export default function AuthenticationPage() {
+export default async function AuthenticationPage() {
+  const cookieStore = await cookies()
+  const accessToken = cookieStore.get('access_token')?.value
+
+  // Redirect to dashboard if already authenticated
+  if (accessToken) {
+    redirect("/dashboard")
+  }
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center bg-background p-4 md:p-8">
       {/* Logo/Branding */}
