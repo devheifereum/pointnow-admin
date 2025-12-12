@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
+import { toast } from "sonner"
 import {
   IconCreditCard,
   IconDotsVertical,
@@ -9,6 +10,7 @@ import {
   IconNotification,
   IconUserCircle,
 } from "@tabler/icons-react"
+import { clearTokens } from "@/lib/auth"
 
 import {
   Avatar,
@@ -43,10 +45,25 @@ export function NavUser({
   const { isMobile } = useSidebar()
   const router = useRouter()
 
-  const handleLogout = () => {
-    // In a real app, you would clear auth tokens/session here
-    // For now, just redirect to auth page
-    router.push("/auth")
+  const handleLogout = async () => {
+    try {
+      // Clear tokens from localStorage
+      clearTokens()
+
+      // Call logout API to clear cookies
+      await fetch("/api/auth/logout", {
+        method: "POST",
+      })
+
+      toast.success("Logged out successfully")
+      router.push("/auth")
+      router.refresh()
+    } catch (error) {
+      console.error("Logout error:", error)
+      // Still redirect even if API call fails
+      clearTokens()
+      router.push("/auth")
+    }
   }
 
   return (

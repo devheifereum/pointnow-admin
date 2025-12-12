@@ -13,6 +13,7 @@ import {
 } from "@tabler/icons-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { getUserData } from "@/lib/auth"
 
 import {
   Sidebar,
@@ -29,12 +30,13 @@ import {
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 
+const getDefaultUser = () => ({
+  name: "Admin User",
+  email: "admin@pointnow.io",
+  avatar: "/avatars/admin.jpg",
+})
+
 const data = {
-  user: {
-    name: "Admin User",
-    email: "admin@pointnow.io",
-    avatar: "/avatars/admin.jpg",
-  },
   navMain: [
     {
       title: "Dashboard",
@@ -73,6 +75,19 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
+  const [user, setUser] = React.useState(getDefaultUser())
+
+  React.useEffect(() => {
+    // Get user data from localStorage
+    const userData = getUserData()
+    if (userData) {
+      setUser({
+        name: userData.name || "Admin User",
+        email: userData.email || "admin@pointnow.io",
+        avatar: "/avatars/admin.jpg",
+      })
+    }
+  }, [])
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -118,7 +133,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
   )

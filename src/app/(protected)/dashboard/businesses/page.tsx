@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { 
   IconTrendingUp, 
   IconSearch, 
@@ -12,7 +13,9 @@ import {
   IconCalendar
 } from "@tabler/icons-react"
 import { DateRange } from "react-day-picker"
-import { isWithinInterval, parseISO } from "date-fns"
+import { isWithinInterval, parseISO, format, subYears } from "date-fns"
+import { toast } from "sonner"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -46,217 +49,376 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { DateRangePicker } from "@/components/ui/date-picker"
 
-// Dummy data - in real app, this would be filtered by dateRange
-const getBusinessesOverview = (dateRange?: DateRange) => {
-  return {
-    total_businesses: 156,
-    active_businesses: 142,
-    new_businesses: 12,
-    businesses_with_subscription: 142,
-    businesses_without_subscription: 14,
+interface BusinessAdmin {
+  email: string
+  name: string
+}
+
+interface BusinessUsageSummary {
+  service: string
+  count: number
+  cost: number
+}
+
+interface BusinessSubscription {
+  id: string
+  type: string
+  provider: string
+  start_date: string
+  end_date: string
+  is_active: boolean
+}
+
+interface BusinessRegion {
+  id: string
+  name: string
+  country_code: string
+}
+
+interface Business {
+  id: string
+  name: string
+  email: string
+  status: string
+  registration_number: string
+  staff_count: number
+  customers_count: number
+  branches_count: number
+  total_points: number
+  admins: BusinessAdmin[]
+  usage_summary: BusinessUsageSummary[]
+  latest_subscription: BusinessSubscription | {}
+  regions: BusinessRegion[]
+  created_at: string
+}
+
+interface BusinessesData {
+  businesses: Business[]
+  metadata: {
+    total: number
+    page: number
+    limit: number
+    total_pages: number
+    has_next: boolean
+    has_previous: boolean
   }
 }
 
-const initialBusinesses = [
-  {
-    business: {
-      id: "bus_001",
-      name: "Coffee House Sdn Bhd",
-      registration_number: "202401001234",
-      is_active: true,
-      created_at: "2024-01-15T08:00:00",
-    },
-    subscription: {
-      status: "active" as const,
-      plan_type: "MONTHLY" as const,
-      end_date: "2025-01-15",
-    },
-    customer_count: 1250,
-    total_points_issued: 125000,
-  },
-  {
-    business: {
-      id: "bus_002",
-      name: "Tech Store MY",
-      registration_number: "202403002345",
-      is_active: true,
-      created_at: "2024-03-01T09:15:00",
-    },
-    subscription: {
-      status: "active" as const,
-      plan_type: "YEARLY" as const,
-      end_date: "2025-03-01",
-    },
-    customer_count: 3420,
-    total_points_issued: 456000,
-  },
-  {
-    business: {
-      id: "bus_003",
-      name: "Bakery Delight",
-      registration_number: "202411003456",
-      is_active: true,
-      created_at: "2024-11-20T10:30:00",
-    },
-    subscription: {
-      status: "trial" as const,
-      plan_type: "MONTHLY" as const,
-      end_date: "2024-12-20",
-    },
-    customer_count: 85,
-    total_points_issued: 4250,
-  },
-  {
-    business: {
-      id: "bus_004",
-      name: "FreshMart",
-      registration_number: "202406004567",
-      is_active: true,
-      created_at: "2024-06-01T14:20:00",
-    },
-    subscription: {
-      status: "active" as const,
-      plan_type: "MONTHLY" as const,
-      end_date: "2025-06-01",
-    },
-    customer_count: 2180,
-    total_points_issued: 287000,
-  },
-  {
-    business: {
-      id: "bus_005",
-      name: "Fashion Hub",
-      registration_number: "202408005678",
-      is_active: false,
-      created_at: "2024-08-15T11:00:00",
-    },
-    subscription: {
-      status: "expired" as const,
-      plan_type: "MONTHLY" as const,
-      end_date: "2024-11-15",
-    },
-    customer_count: 650,
-    total_points_issued: 32500,
-  },
-  {
-    business: {
-      id: "bus_006",
-      name: "Gym Pro Fitness",
-      registration_number: "202402006789",
-      is_active: true,
-      created_at: "2024-02-01T08:45:00",
-    },
-    subscription: {
-      status: "active" as const,
-      plan_type: "YEARLY" as const,
-      end_date: "2025-02-01",
-    },
-    customer_count: 890,
-    total_points_issued: 178000,
-  },
-  {
-    business: {
-      id: "bus_007",
-      name: "Pet Paradise",
-      registration_number: "202411007890",
-      is_active: true,
-      created_at: "2024-11-25T13:15:00",
-    },
-    subscription: {
-      status: "trial" as const,
-      plan_type: null,
-      end_date: "2024-12-25",
-    },
-    customer_count: 42,
-    total_points_issued: 2100,
-  },
-  {
-    business: {
-      id: "bus_008",
-      name: "Auto Care Center",
-      registration_number: "202404008901",
-      is_active: true,
-      created_at: "2024-04-10T16:30:00",
-    },
-    subscription: {
-      status: "active" as const,
-      plan_type: "MONTHLY" as const,
-      end_date: "2025-04-10",
-    },
-    customer_count: 520,
-    total_points_issued: 78000,
-  },
-  {
-    business: {
-      id: "bus_009",
-      name: "Book Corner",
-      registration_number: "202409009012",
-      is_active: true,
-      created_at: "2024-09-05T09:00:00",
-    },
-    subscription: {
-      status: "none" as const,
-      plan_type: null,
-      end_date: null,
-    },
-    customer_count: 0,
-    total_points_issued: 0,
-  },
-]
+// Transform API business to UI format
+type TransformedBusiness = {
+  business: {
+    id: string
+    name: string
+    registration_number: string
+    is_active: boolean
+    created_at: string
+  }
+  subscription: {
+    status: string
+    plan_type: string | null
+    end_date: string | null
+  }
+  customer_count: number
+  total_points_issued: number
+}
+
+interface BusinessMetrics {
+  total_business: number
+  recent_business: Array<{
+    id: string
+    name: string
+    email: string
+    phone_number: string
+    status: string
+    registration_number: string
+    address: string
+    created_at: string
+  }>
+  most_customers_business: Array<{
+    id: string
+    name: string
+    email: string
+    phone_number: string
+    status: string
+    registration_number: string
+    address: string
+    created_at: string
+    total_customers: number
+  }>
+  most_points_business: Array<{
+    id: string
+    name: string
+    email: string | null
+    phone_number: string | null
+    status: string
+    registration_number: string
+    address: string
+    created_at: string
+    total_points: number
+  }>
+}
+
+// Initialize default date range: one year ago to now
+const getDefaultDateRange = (): DateRange => {
+  const now = new Date()
+  const oneYearAgo = subYears(now, 1)
+  return {
+    from: oneYearAgo,
+    to: now,
+  }
+}
 
 export default function BusinessesPage() {
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>()
-  const [businesses, setBusinesses] = React.useState(initialBusinesses)
+  const router = useRouter()
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(getDefaultDateRange())
+  const [businessesData, setBusinessesData] = React.useState<BusinessesData | null>(null)
+  const [businessMetrics, setBusinessMetrics] = React.useState<BusinessMetrics | null>(null)
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [isLoadingMetrics, setIsLoadingMetrics] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
   const [activeFilter, setActiveFilter] = React.useState("all")
   const [createdDateRange, setCreatedDateRange] = React.useState<DateRange | undefined>()
   const [subscriptionEndRange, setSubscriptionEndRange] = React.useState<DateRange | undefined>()
-  const [selectedBusiness, setSelectedBusiness] = React.useState<typeof initialBusinesses[0] | null>(null)
-  const [showDetailDialog, setShowDetailDialog] = React.useState(false)
-  
-  const businessesOverview = getBusinessesOverview(dateRange)
+  const [page, setPage] = React.useState(1)
+  const [limit] = React.useState(10)
 
-  const filteredBusinesses = businesses.filter((item) => {
-    const matchesSearch = 
-      item.business.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.business.registration_number.includes(searchQuery)
-    const matchesStatus = statusFilter === "all" || item.subscription.status === statusFilter
-    const matchesActive = 
-      activeFilter === "all" || 
-      (activeFilter === "active" && item.business.is_active) ||
-      (activeFilter === "inactive" && !item.business.is_active)
-    
-    // Filter by created date range
-    const createdDate = parseISO(item.business.created_at)
-    const matchesCreatedDate = !createdDateRange?.from || (
-      isWithinInterval(createdDate, {
-        start: createdDateRange.from,
-        end: createdDateRange.to || createdDateRange.from
+  // Debounce search query
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Transform API business to UI format
+  const transformBusiness = (business: Business): TransformedBusiness => {
+    const subscription = business.latest_subscription && 'type' in business.latest_subscription
+      ? business.latest_subscription
+      : null
+
+    // Determine subscription status
+    let subscriptionStatus = "none"
+    if (subscription) {
+      if (subscription.is_active) {
+        subscriptionStatus = subscription.type === "FREE" ? "trial" : "active"
+      } else {
+        subscriptionStatus = "expired"
+      }
+    }
+
+    // Business is active if it has an active subscription
+    const isActive = subscription?.is_active || false
+
+    return {
+      business: {
+        id: business.id,
+        name: business.name,
+        registration_number: business.registration_number,
+        is_active: isActive,
+        created_at: business.created_at,
+      },
+      subscription: {
+        status: subscriptionStatus,
+        plan_type: subscription?.type || null,
+        end_date: subscription?.end_date || null,
+      },
+      customer_count: business.customers_count,
+      total_points_issued: business.total_points,
+    }
+  }
+
+  // Fetch businesses from API
+  const fetchBusinesses = React.useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const params = new URLSearchParams()
+      params.append('page', page.toString())
+      params.append('limit', limit.toString())
+      
+      if (debouncedSearchQuery) {
+        params.append('query', debouncedSearchQuery)
+      }
+
+      const queryString = params.toString()
+      const url = `/api/analytics/business/summary?${queryString}`
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
-    )
-    
-    // Filter by subscription end date range
-    const matchesEndDate = !subscriptionEndRange?.from || (
-      item.subscription.end_date && 
-      isWithinInterval(parseISO(item.subscription.end_date), {
-        start: subscriptionEndRange.from,
-        end: subscriptionEndRange.to || subscriptionEndRange.from
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch businesses')
+      }
+
+      if (data.data) {
+        setBusinessesData(data.data)
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
+      setError(errorMessage)
+      toast.error('Failed to load businesses', {
+        description: errorMessage,
       })
-    )
-    
-    return matchesSearch && matchesStatus && matchesActive && matchesCreatedDate && matchesEndDate
-  })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [page, limit, debouncedSearchQuery])
+
+  // Fetch business metrics
+  const fetchBusinessMetrics = React.useCallback(async () => {
+    setIsLoadingMetrics(true)
+    setError(null)
+
+    try {
+      const params = new URLSearchParams()
+      if (dateRange?.from) {
+        params.append('start_date', format(dateRange.from, 'yyyy-MM-dd'))
+      }
+      if (dateRange?.to) {
+        params.append('end_date', format(dateRange.to, 'yyyy-MM-dd'))
+      }
+
+      const queryString = params.toString()
+      const url = `/api/analytics/business/summary/metrics${queryString ? `?${queryString}` : ''}`
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch business metrics')
+      }
+
+      if (data.data) {
+        setBusinessMetrics(data.data)
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
+      setError(errorMessage)
+      toast.error('Failed to load business metrics', {
+        description: errorMessage,
+      })
+    } finally {
+      setIsLoadingMetrics(false)
+    }
+  }, [dateRange])
+
+  React.useEffect(() => {
+    fetchBusinesses()
+  }, [fetchBusinesses])
+
+  React.useEffect(() => {
+    fetchBusinessMetrics()
+  }, [fetchBusinessMetrics])
+
+  // Transform businesses for UI
+  const transformedBusinesses = React.useMemo(() => {
+    if (!businessesData?.businesses) return []
+    return businessesData.businesses.map(transformBusiness)
+  }, [businessesData])
+
+  // Calculate overview metrics from API data
+  // Note: Some metrics come from the metrics API, others are calculated from businesses list
+  const businessesOverview = React.useMemo(() => {
+    // Use metrics API for total_business
+    const totalBusinesses = businessMetrics?.total_business || 0
+
+    // Calculate other metrics from businesses list if available
+    let activeBusinesses = 0
+    let newBusinesses = 0
+    let businessesWithSubscription = 0
+    let businessesWithoutSubscription = 0
+
+    if (businessesData?.businesses) {
+      const businesses = businessesData.businesses
+      const now = new Date()
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+      const activeBusinessesList = businesses.filter(b => {
+        const sub = b.latest_subscription && 'is_active' in b.latest_subscription
+          ? b.latest_subscription
+          : null
+        return sub?.is_active || false
+      })
+
+      const newBusinessesList = businesses.filter(b => {
+        const createdDate = parseISO(b.created_at)
+        return createdDate >= startOfMonth
+      })
+
+      const withSubscription = businesses.filter(b => {
+        const sub = b.latest_subscription && 'type' in b.latest_subscription
+          ? b.latest_subscription
+          : null
+        return sub && sub.is_active
+      })
+
+      activeBusinesses = activeBusinessesList.length
+      newBusinesses = newBusinessesList.length
+      businessesWithSubscription = withSubscription.length
+      businessesWithoutSubscription = businesses.length - withSubscription.length
+    }
+
+    return {
+      total_businesses: totalBusinesses,
+      active_businesses: activeBusinesses,
+      new_businesses: newBusinesses,
+      businesses_with_subscription: businessesWithSubscription,
+      businesses_without_subscription: businessesWithoutSubscription,
+    }
+  }, [businessMetrics, businessesData])
+
+  // Client-side filtering (for date ranges and status filters)
+  const filteredBusinesses = React.useMemo(() => {
+    if (!transformedBusinesses.length) return []
+
+    return transformedBusinesses.filter((item) => {
+      // Search is handled server-side, but we can do additional client-side filtering
+      const matchesStatus = statusFilter === "all" || item.subscription.status === statusFilter
+      const matchesActive = 
+        activeFilter === "all" || 
+        (activeFilter === "active" && item.business.is_active) ||
+        (activeFilter === "inactive" && !item.business.is_active)
+      
+      // Filter by created date range
+      const createdDate = parseISO(item.business.created_at)
+      const matchesCreatedDate = !createdDateRange?.from || (
+        isWithinInterval(createdDate, {
+          start: createdDateRange.from,
+          end: createdDateRange.to || createdDateRange.from
+        })
+      )
+      
+      // Filter by subscription end date range
+      const matchesEndDate = !subscriptionEndRange?.from || (
+        item.subscription.end_date && 
+        isWithinInterval(parseISO(item.subscription.end_date), {
+          start: subscriptionEndRange.from,
+          end: subscriptionEndRange.to || subscriptionEndRange.from
+        })
+      )
+      
+      return matchesStatus && matchesActive && matchesCreatedDate && matchesEndDate
+    })
+  }, [transformedBusinesses, statusFilter, activeFilter, createdDateRange, subscriptionEndRange])
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -283,24 +445,18 @@ export default function BusinessesPage() {
   }
 
   const toggleBusinessStatus = (businessId: string) => {
-    setBusinesses(prev => prev.map(item => {
-      if (item.business.id === businessId) {
-        return {
-          ...item,
-          business: {
-            ...item.business,
-            is_active: !item.business.is_active
-          }
-        }
-      }
-      return item
-    }))
+    // TODO: Implement API call to toggle business status
+    toast.info('Business status toggle not yet implemented')
   }
 
-  const viewBusinessDetails = (business: typeof initialBusinesses[0]) => {
-    setSelectedBusiness(business)
-    setShowDetailDialog(true)
+  const viewBusinessDetails = (business: TransformedBusiness) => {
+    router.push(`/dashboard/businesses/${business.business.id}`)
   }
+
+  // Reset page when debounced search query changes
+  React.useEffect(() => {
+    setPage(1)
+  }, [debouncedSearchQuery])
 
   const clearAllFilters = () => {
     setDateRange(undefined)
@@ -335,23 +491,34 @@ export default function BusinessesPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setDateRange(undefined)}
+              onClick={() => setDateRange(getDefaultDateRange())}
               className="whitespace-nowrap"
             >
-              Clear
+              Reset
             </Button>
           )}
         </div>
       </div>
+
+      {/* Error State */}
+      {error && !isLoading && !isLoadingMetrics && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          {error}
+        </div>
+      )}
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="@container/card">
           <CardHeader className="pb-2">
             <CardDescription>Total Businesses</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums">
-              {businessesOverview.total_businesses}
-            </CardTitle>
+            {isLoadingMetrics ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <CardTitle className="text-2xl font-semibold tabular-nums">
+                {businessesOverview.total_businesses}
+              </CardTitle>
+            )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
             Registered businesses
@@ -361,9 +528,13 @@ export default function BusinessesPage() {
         <Card className="@container/card">
           <CardHeader className="pb-2">
             <CardDescription>Active Businesses</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums">
-              {businessesOverview.active_businesses}
-            </CardTitle>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <CardTitle className="text-2xl font-semibold tabular-nums">
+                {businessesOverview.active_businesses}
+              </CardTitle>
+            )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
             With active subscription
@@ -373,9 +544,13 @@ export default function BusinessesPage() {
         <Card className="@container/card">
           <CardHeader className="pb-2">
             <CardDescription>New Businesses</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums">
-              {businessesOverview.new_businesses}
-            </CardTitle>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <CardTitle className="text-2xl font-semibold tabular-nums">
+                {businessesOverview.new_businesses}
+              </CardTitle>
+            )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
             This month
@@ -385,9 +560,13 @@ export default function BusinessesPage() {
         <Card className="@container/card">
           <CardHeader className="pb-2">
             <CardDescription>With Subscription</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums">
-              {businessesOverview.businesses_with_subscription}
-            </CardTitle>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <CardTitle className="text-2xl font-semibold tabular-nums">
+                {businessesOverview.businesses_with_subscription}
+              </CardTitle>
+            )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
             Active or trial
@@ -397,9 +576,13 @@ export default function BusinessesPage() {
         <Card className="@container/card">
           <CardHeader className="pb-2">
             <CardDescription>Without Subscription</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums">
-              {businessesOverview.businesses_without_subscription}
-            </CardTitle>
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <CardTitle className="text-2xl font-semibold tabular-nums">
+                {businessesOverview.businesses_without_subscription}
+              </CardTitle>
+            )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
             No subscription
@@ -496,7 +679,19 @@ export default function BusinessesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredBusinesses.length === 0 ? (
+                  {isLoading ? (
+                    Array.from({ length: limit }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell className="text-right hidden sm:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell className="text-right hidden lg:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell className="text-center"><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-4 w-16" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : filteredBusinesses.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="h-24 text-center">
                         No businesses found.
@@ -570,75 +765,43 @@ export default function BusinessesPage() {
             </div>
           </div>
 
-          {/* Results count */}
-          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-            <p>Showing {filteredBusinesses.length} of {businesses.length} businesses</p>
-          </div>
+          {/* Pagination and Results count */}
+          {businessesData && (
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredBusinesses.length} of {businessesData.metadata.total} businesses
+                {businessesData.metadata.total_pages > 1 && (
+                  <span> (Page {businessesData.metadata.page} of {businessesData.metadata.total_pages})</span>
+                )}
+              </p>
+              {businessesData.metadata.total_pages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={!businessesData.metadata.has_previous || isLoading}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {businessesData.metadata.page} of {businessesData.metadata.total_pages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={!businessesData.metadata.has_next || isLoading}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Business Details Dialog */}
-      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{selectedBusiness?.business.name}</DialogTitle>
-            <DialogDescription>
-              Business details and statistics
-            </DialogDescription>
-          </DialogHeader>
-          {selectedBusiness && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Registration Number</p>
-                  <p className="font-medium">{selectedBusiness.business.registration_number}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <p className="font-medium">
-                    {selectedBusiness.business.is_active ? "Active" : "Inactive"}
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Subscription</p>
-                  <div className="mt-1">{getStatusBadge(selectedBusiness.subscription.status)}</div>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Plan Type</p>
-                  <p className="font-medium">{selectedBusiness.subscription.plan_type || "N/A"}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Customers</p>
-                  <p className="font-medium">{selectedBusiness.customer_count.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Points Issued</p>
-                  <p className="font-medium">{selectedBusiness.total_points_issued.toLocaleString()}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Created Date</p>
-                  <p className="font-medium">{formatDate(selectedBusiness.business.created_at)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Subscription End</p>
-                  <p className="font-medium">{formatDate(selectedBusiness.subscription.end_date)}</p>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

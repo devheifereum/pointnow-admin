@@ -172,10 +172,10 @@ export default function SettingsPage() {
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        ${product.price_monthly.toLocaleString()}
+                        RM {product.price_monthly.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        ${product.price_yearly.toLocaleString()}
+                        RM {product.price_yearly.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-center">
                         {product.has_trial ? (

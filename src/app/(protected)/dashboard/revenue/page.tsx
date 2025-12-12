@@ -1,14 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { IconTrendingUp, IconTrendingDown, IconSearch, IconCalendar } from "@tabler/icons-react"
+import { IconSearch, IconCalendar } from "@tabler/icons-react"
 import { DateRange } from "react-day-picker"
-import { isWithinInterval, parseISO } from "date-fns"
+import { format, subYears } from "date-fns"
+import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -32,168 +32,226 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { DateRangePicker } from "@/components/ui/date-picker"
+import { Skeleton } from "@/components/ui/skeleton"
+import { ExternalLink } from "lucide-react"
 
-// Dummy data - in real app, this would be filtered by dateRange
-const getRevenueOverview = (dateRange?: DateRange) => {
-  return {
-    total_mrr: 45250.00,
-    total_arr: 543000.00,
-    active_subscriptions: 142,
-    trial_subscriptions: 14,
-    paid_subscriptions: 128,
+interface RevenueMetrics {
+  total_revenue: number
+  total_customers: number
+  total_active_subscriptions: number
+}
+
+interface Charge {
+  id: string
+  amount: number
+  amount_refunded: number
+  billing_details: {
+    email: string
+    name: string
+  }
+  created: number
+  currency: string
+  customer: string
+  description: string
+  paid: boolean
+  payment_method_details: {
+    card: {
+      brand: string
+      last4: string
+    }
+    type: string
+  }
+  receipt_url: string | null
+  refunded: boolean
+  status: string
+}
+
+interface ChargesData {
+  charges: Charge[]
+  metadata: {
+    total: number
+    page: number
+    limit: number
+    total_pages: number
+    has_next: boolean
+    has_previous: boolean
   }
 }
 
-const subscriptions = [
-  {
-    id: "sub_001",
-    business: { id: "bus_001", name: "Coffee House Sdn Bhd" },
-    subscription_type: { id: "type_001", name: "Premium" },
-    product: { price: 299, duration: "MONTHLY" as const },
-    start_date: "2024-01-15",
-    end_date: "2025-01-15",
-    is_active: true,
-    cancelled_at: null,
-    status: "active" as const,
-  },
-  {
-    id: "sub_002",
-    business: { id: "bus_002", name: "Tech Store MY" },
-    subscription_type: { id: "type_001", name: "Premium" },
-    product: { price: 2990, duration: "YEARLY" as const },
-    start_date: "2024-03-01",
-    end_date: "2025-03-01",
-    is_active: true,
-    cancelled_at: null,
-    status: "active" as const,
-  },
-  {
-    id: "sub_003",
-    business: { id: "bus_003", name: "Bakery Delight" },
-    subscription_type: { id: "type_002", name: "Starter" },
-    product: { price: 99, duration: "MONTHLY" as const },
-    start_date: "2024-11-20",
-    end_date: "2024-12-20",
-    is_active: true,
-    cancelled_at: null,
-    status: "trial" as const,
-  },
-  {
-    id: "sub_004",
-    business: { id: "bus_004", name: "FreshMart" },
-    subscription_type: { id: "type_001", name: "Premium" },
-    product: { price: 299, duration: "MONTHLY" as const },
-    start_date: "2024-06-01",
-    end_date: "2025-06-01",
-    is_active: true,
-    cancelled_at: null,
-    status: "active" as const,
-  },
-  {
-    id: "sub_005",
-    business: { id: "bus_005", name: "Fashion Hub" },
-    subscription_type: { id: "type_002", name: "Starter" },
-    product: { price: 99, duration: "MONTHLY" as const },
-    start_date: "2024-08-15",
-    end_date: "2024-11-15",
-    is_active: false,
-    cancelled_at: "2024-11-15",
-    status: "expired" as const,
-  },
-  {
-    id: "sub_006",
-    business: { id: "bus_006", name: "Gym Pro Fitness" },
-    subscription_type: { id: "type_001", name: "Premium" },
-    product: { price: 2990, duration: "YEARLY" as const },
-    start_date: "2024-02-01",
-    end_date: "2025-02-01",
-    is_active: true,
-    cancelled_at: null,
-    status: "active" as const,
-  },
-  {
-    id: "sub_007",
-    business: { id: "bus_007", name: "Pet Paradise" },
-    subscription_type: { id: "type_002", name: "Starter" },
-    product: { price: 99, duration: "MONTHLY" as const },
-    start_date: "2024-11-25",
-    end_date: "2024-12-25",
-    is_active: true,
-    cancelled_at: null,
-    status: "trial" as const,
-  },
-  {
-    id: "sub_008",
-    business: { id: "bus_008", name: "Auto Care Center" },
-    subscription_type: { id: "type_001", name: "Premium" },
-    product: { price: 299, duration: "MONTHLY" as const },
-    start_date: "2024-04-10",
-    end_date: "2025-04-10",
-    is_active: true,
-    cancelled_at: null,
-    status: "active" as const,
-  },
-]
+// Initialize default date range: one year ago to now
+const getDefaultDateRange = (): DateRange => {
+  const now = new Date()
+  const oneYearAgo = subYears(now, 1)
+  return {
+    from: oneYearAgo,
+    to: now,
+  }
+}
 
 export default function RevenuePage() {
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>()
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(getDefaultDateRange())
+  const [metrics, setMetrics] = React.useState<RevenueMetrics | null>(null)
+  const [charges, setCharges] = React.useState<ChargesData | null>(null)
+  const [isLoadingMetrics, setIsLoadingMetrics] = React.useState(true)
+  const [isLoadingCharges, setIsLoadingCharges] = React.useState(true)
+  const [error, setError] = React.useState<string | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState("all")
-  const [planFilter, setPlanFilter] = React.useState("all")
-  const [startDateRange, setStartDateRange] = React.useState<DateRange | undefined>()
-  const [endDateRange, setEndDateRange] = React.useState<DateRange | undefined>()
-  
-  const revenueOverview = getRevenueOverview(dateRange)
+  const [page, setPage] = React.useState(1)
+  const [limit] = React.useState(10)
 
-  const filteredSubscriptions = subscriptions.filter((sub) => {
-    const matchesSearch = sub.business.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === "all" || sub.status === statusFilter
-    const matchesPlan = planFilter === "all" || sub.product.duration === planFilter
-    
-    // Filter by start date range
-    const subStartDate = parseISO(sub.start_date)
-    const matchesStartDate = !startDateRange?.from || (
-      isWithinInterval(subStartDate, {
-        start: startDateRange.from,
-        end: startDateRange.to || startDateRange.from
+  const fetchMetrics = React.useCallback(async () => {
+    setIsLoadingMetrics(true)
+    setError(null)
+
+    try {
+      const params = new URLSearchParams()
+      if (dateRange?.from) {
+        params.append('start_date', format(dateRange.from, 'yyyy-MM-dd'))
+      }
+      if (dateRange?.to) {
+        params.append('end_date', format(dateRange.to, 'yyyy-MM-dd'))
+      }
+
+      const queryString = params.toString()
+      const url = `/api/analytics/revenue/metrics${queryString ? `?${queryString}` : ''}`
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
-    )
-    
-    // Filter by end date range
-    const subEndDate = parseISO(sub.end_date)
-    const matchesEndDate = !endDateRange?.from || (
-      isWithinInterval(subEndDate, {
-        start: endDateRange.from,
-        end: endDateRange.to || endDateRange.from
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch revenue metrics')
+      }
+
+      if (data.data?.metrics) {
+        setMetrics(data.data.metrics)
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
+      setError(errorMessage)
+      toast.error('Failed to load revenue metrics', {
+        description: errorMessage,
       })
-    )
+    } finally {
+      setIsLoadingMetrics(false)
+    }
+  }, [dateRange])
+
+  const fetchCharges = React.useCallback(async () => {
+    setIsLoadingCharges(true)
+    setError(null)
+
+    try {
+      const params = new URLSearchParams()
+      if (dateRange?.from) {
+        params.append('start_date', format(dateRange.from, 'yyyy-MM-dd'))
+      }
+      if (dateRange?.to) {
+        params.append('end_date', format(dateRange.to, 'yyyy-MM-dd'))
+      }
+      params.append('page', page.toString())
+      params.append('limit', limit.toString())
+
+      const queryString = params.toString()
+      const url = `/api/analytics/revenue/charges?${queryString}`
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch charges')
+      }
+
+      if (data.data) {
+        setCharges(data.data)
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
+      setError(errorMessage)
+      toast.error('Failed to load charges', {
+        description: errorMessage,
+      })
+    } finally {
+      setIsLoadingCharges(false)
+    }
+  }, [dateRange, page, limit])
+
+  React.useEffect(() => {
+    fetchMetrics()
+  }, [fetchMetrics])
+
+  React.useEffect(() => {
+    fetchCharges()
+  }, [fetchCharges])
+
+  // Filter charges client-side (for search and status)
+  const filteredCharges = React.useMemo(() => {
+    if (!charges?.charges) return []
     
-    return matchesSearch && matchesStatus && matchesPlan && matchesStartDate && matchesEndDate
-  })
+    return charges.charges.filter((charge) => {
+      const matchesSearch = 
+        charge.billing_details.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        charge.billing_details.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        charge.id.toLowerCase().includes(searchQuery.toLowerCase())
+      
+      const matchesStatus = statusFilter === "all" || charge.status === statusFilter
+      
+      return matchesSearch && matchesStatus
+    })
+  }, [charges, searchQuery, statusFilter])
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "active":
-        return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">Active</Badge>
-      case "trial":
-        return <Badge className="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20">Trial</Badge>
-      case "expired":
-        return <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20">Expired</Badge>
+      case "succeeded":
+        return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">Succeeded</Badge>
+      case "pending":
+        return <Badge className="bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20">Pending</Badge>
+      case "failed":
+        return <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20">Failed</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
   }
 
-  const clearAllFilters = () => {
-    setDateRange(undefined)
-    setSearchQuery("")
-    setStatusFilter("all")
-    setPlanFilter("all")
-    setStartDateRange(undefined)
-    setEndDateRange(undefined)
+  const formatAmount = (amount: number, currency: string) => {
+    // Amount is in cents, convert to ringgit
+    const amountInRinggit = amount / 100
+    return `RM ${amountInRinggit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
-  const hasActiveFilters = dateRange?.from || searchQuery || statusFilter !== "all" || planFilter !== "all" || startDateRange?.from || endDateRange?.from
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
+  const clearAllFilters = () => {
+    setDateRange(getDefaultDateRange())
+    setSearchQuery("")
+    setStatusFilter("all")
+    setPage(1)
+  }
+
+  const hasActiveFilters = searchQuery || statusFilter !== "all" || page !== 1
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setPage(1)
+  }, [dateRange, searchQuery, statusFilter])
 
   return (
     <div className="@container/main flex flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
@@ -217,85 +275,83 @@ export default function RevenuePage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setDateRange(undefined)}
+              onClick={() => setDateRange(getDefaultDateRange())}
               className="whitespace-nowrap"
             >
-              Clear
+              Reset
             </Button>
           )}
         </div>
       </div>
 
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      {/* Error State */}
+      {error && !isLoadingMetrics && !isLoadingCharges && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          {error}
+        </div>
+      )}
+
+      {/* Overview Cards - Only showing metrics from API */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* Total Revenue */}
         <Card className="@container/card">
           <CardHeader className="pb-2">
-            <CardDescription>Total MRR</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums">
-              ${revenueOverview.total_mrr.toLocaleString()}
-            </CardTitle>
+            <CardDescription>Total Revenue</CardDescription>
+            {isLoadingMetrics ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                RM {metrics?.total_revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+              </CardTitle>
+            )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
-            Monthly Recurring Revenue
+            Total revenue in the selected period
           </CardFooter>
         </Card>
 
+        {/* Total Customers */}
         <Card className="@container/card">
           <CardHeader className="pb-2">
-            <CardDescription>Total ARR</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums">
-              ${revenueOverview.total_arr.toLocaleString()}
-            </CardTitle>
+            <CardDescription>Total Customers</CardDescription>
+            {isLoadingMetrics ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                {metrics?.total_customers.toLocaleString() || '0'}
+              </CardTitle>
+            )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
-            Annual Recurring Revenue
+            Total number of customers
           </CardFooter>
         </Card>
 
+        {/* Active Subscriptions */}
         <Card className="@container/card">
           <CardHeader className="pb-2">
-            <CardDescription>Active</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums">
-              {revenueOverview.active_subscriptions}
-            </CardTitle>
+            <CardDescription>Active Subscriptions</CardDescription>
+            {isLoadingMetrics ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                {metrics?.total_active_subscriptions.toLocaleString() || '0'}
+              </CardTitle>
+            )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
-            Active subscriptions
-          </CardFooter>
-        </Card>
-
-        <Card className="@container/card">
-          <CardHeader className="pb-2">
-            <CardDescription>Trial</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums">
-              {revenueOverview.trial_subscriptions}
-            </CardTitle>
-          </CardHeader>
-          <CardFooter className="text-xs text-muted-foreground">
-            Trial subscriptions
-          </CardFooter>
-        </Card>
-
-        <Card className="@container/card">
-          <CardHeader className="pb-2">
-            <CardDescription>Paid</CardDescription>
-            <CardTitle className="text-2xl font-semibold tabular-nums">
-              {revenueOverview.paid_subscriptions}
-            </CardTitle>
-          </CardHeader>
-          <CardFooter className="text-xs text-muted-foreground">
-            Paid subscriptions
+            Total active subscriptions
           </CardFooter>
         </Card>
       </div>
 
-      {/* Subscriptions List */}
+      {/* Charges List */}
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>Subscriptions</CardTitle>
-              <CardDescription>Manage all active subscriptions</CardDescription>
+              <CardTitle>Charges</CardTitle>
+              <CardDescription>View all payment charges and transactions</CardDescription>
             </div>
             {hasActiveFilters && (
               <Button variant="outline" size="sm" onClick={clearAllFilters}>
@@ -311,7 +367,7 @@ export default function RevenuePage() {
               <div className="relative flex-1">
                 <IconSearch className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search business name..."
+                  placeholder="Search by name, email, or charge ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -323,78 +379,106 @@ export default function RevenuePage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="trial">Trial</SelectItem>
-                  <SelectItem value="expired">Expired</SelectItem>
+                  <SelectItem value="succeeded">Succeeded</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={planFilter} onValueChange={setPlanFilter}>
-                <SelectTrigger className="w-full sm:w-[150px]">
-                  <SelectValue placeholder="Plan Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Plans</SelectItem>
-                  <SelectItem value="MONTHLY">Monthly</SelectItem>
-                  <SelectItem value="YEARLY">Yearly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Date Range Filters */}
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <div className="flex-1">
-                <p className="mb-1.5 text-xs font-medium text-muted-foreground">Start Date Range</p>
-                <DateRangePicker
-                  dateRange={startDateRange}
-                  onDateRangeChange={setStartDateRange}
-                  placeholder="Filter by start date"
-                />
-              </div>
-              <div className="flex-1">
-                <p className="mb-1.5 text-xs font-medium text-muted-foreground">End Date Range</p>
-                <DateRangePicker
-                  dateRange={endDateRange}
-                  onDateRangeChange={setEndDateRange}
-                  placeholder="Filter by end date"
-                />
-              </div>
             </div>
           </div>
 
           {/* Table */}
           <div className="w-full overflow-x-auto">
-            <div className="rounded-md border min-w-[640px]">
+            <div className="rounded-md border min-w-[800px]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Business</TableHead>
-                    <TableHead>Plan</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Duration</TableHead>
+                    <TableHead>Charge ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Payment Method</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="whitespace-nowrap">Start Date</TableHead>
-                    <TableHead className="whitespace-nowrap">End Date</TableHead>
+                    <TableHead className="whitespace-nowrap">Date</TableHead>
+                    <TableHead>Receipt</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSubscriptions.length === 0 ? (
+                  {isLoadingCharges ? (
+                    Array.from({ length: limit }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : filteredCharges.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="h-24 text-center">
-                        No subscriptions found.
+                        No charges found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredSubscriptions.map((sub) => (
-                      <TableRow key={sub.id}>
-                        <TableCell className="font-medium">{sub.business.name}</TableCell>
-                        <TableCell>{sub.subscription_type.name}</TableCell>
-                        <TableCell>${sub.product.price.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{sub.product.duration}</Badge>
+                    filteredCharges.map((charge) => (
+                      <TableRow key={charge.id}>
+                        <TableCell className="font-mono text-xs">
+                          {charge.id.substring(0, 20)}...
                         </TableCell>
-                        <TableCell>{getStatusBadge(sub.status)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{new Date(sub.start_date).toLocaleDateString()}</TableCell>
-                        <TableCell className="whitespace-nowrap">{new Date(sub.end_date).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{charge.billing_details.name}</span>
+                            <span className="text-xs text-muted-foreground">{charge.billing_details.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {formatAmount(charge.amount, charge.currency)}
+                          {charge.amount_refunded > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              Refunded: {formatAmount(charge.amount_refunded, charge.currency)}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {charge.payment_method_details.card?.brand.toUpperCase() || charge.payment_method_details.type}
+                            </Badge>
+                            {charge.payment_method_details.card?.last4 && (
+                              <span className="text-xs text-muted-foreground">
+                                •••• {charge.payment_method_details.card.last4}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(charge.status)}</TableCell>
+                        <TableCell className="whitespace-nowrap text-sm">
+                          {formatDate(charge.created)}
+                        </TableCell>
+                        <TableCell>
+                          {charge.receipt_url ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              asChild
+                              className="h-8"
+                            >
+                              <a
+                                href={charge.receipt_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                <span className="text-xs">View</span>
+                              </a>
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -403,10 +487,40 @@ export default function RevenuePage() {
             </div>
           </div>
 
-          {/* Results count */}
-          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-            <p>Showing {filteredSubscriptions.length} of {subscriptions.length} subscriptions</p>
-          </div>
+          {/* Pagination and Results count */}
+          {charges && (
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {filteredCharges.length} of {charges.metadata.total} charges
+                {charges.metadata.total_pages > 1 && (
+                  <span> (Page {charges.metadata.page} of {charges.metadata.total_pages})</span>
+                )}
+              </p>
+              {charges.metadata.total_pages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={!charges.metadata.has_previous || isLoadingCharges}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {charges.metadata.page} of {charges.metadata.total_pages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={!charges.metadata.has_next || isLoadingCharges}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
