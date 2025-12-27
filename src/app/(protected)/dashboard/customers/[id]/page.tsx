@@ -81,34 +81,34 @@ export default function CustomerDetailPage() {
         const data = await response.json()
 
         if (!response.ok) {
-          throw new Error(data.message || 'Failed to fetch customer')
-        }
-
-        if (data.data?.customers) {
-          foundCustomer = data.data.customers.find((c: Customer) => c.id === customerId) || null
-          
-          if (foundCustomer) {
-            setCustomer(foundCustomer)
-            break
-          }
-
-          // Check if there are more pages to search
-          hasMore = data.data.metadata?.has_next || false
-          page++
-        } else {
-          hasMore = false
-        }
+        throw new Error(data.message || 'Failed to fetch user')
       }
 
-      if (!foundCustomer) {
-        throw new Error('Customer not found')
+      if (data.data?.customers) {
+        foundCustomer = data.data.customers.find((c: Customer) => c.id === customerId) || null
+        
+        if (foundCustomer) {
+          setCustomer(foundCustomer)
+          break
+        }
+
+        // Check if there are more pages to search
+        hasMore = data.data.metadata?.has_next || false
+        page++
+      } else {
+        hasMore = false
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
-      setError(errorMessage)
-      toast.error('Failed to load customer', {
-        description: errorMessage,
-      })
+    }
+
+    if (!foundCustomer) {
+      throw new Error('User not found')
+    }
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
+    setError(errorMessage)
+    toast.error('Failed to load user', {
+      description: errorMessage,
+    })
     } finally {
       setIsLoadingCustomer(false)
     }
@@ -191,11 +191,11 @@ export default function CustomerDetailPage() {
             {isLoadingCustomer ? (
               <Skeleton className="h-8 w-48" />
             ) : (
-              customer?.name || 'Customer Details'
+              customer?.name || 'User Details'
             )}
           </h2>
           <p className="text-muted-foreground text-sm">
-            View customer details and historical points data
+            View user details and historical points data
           </p>
         </div>
       </div>
@@ -211,8 +211,8 @@ export default function CustomerDetailPage() {
       {isLoadingCustomer ? (
         <Card>
           <CardHeader>
-            <CardTitle>Customer Information</CardTitle>
-            <CardDescription>Basic customer details</CardDescription>
+            <CardTitle>User Information</CardTitle>
+            <CardDescription>Basic user details</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
@@ -228,8 +228,8 @@ export default function CustomerDetailPage() {
       ) : customer ? (
         <Card>
           <CardHeader>
-            <CardTitle>Customer Information</CardTitle>
-            <CardDescription>Basic customer details</CardDescription>
+            <CardTitle>User Information</CardTitle>
+            <CardDescription>Basic user details</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-2">
@@ -283,7 +283,7 @@ export default function CustomerDetailPage() {
         <CardHeader>
           <CardTitle>Points Historical Data</CardTitle>
           <CardDescription>
-            Historical points data for {customer?.name || 'this customer'}
+            Historical points data for {customer?.name || 'this user'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -396,3 +396,4 @@ export default function CustomerDetailPage() {
     </div>
   )
 }
+

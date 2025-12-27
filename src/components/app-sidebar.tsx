@@ -49,7 +49,7 @@ const data = {
       icon: IconCreditCard,
     },
     {
-      title: "Customers",
+      title: "Users",
       url: "/dashboard/customers",
       icon: IconUsers,
     },

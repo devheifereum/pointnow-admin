@@ -254,7 +254,7 @@ export default function DashboardPage() {
         {(isLoadingMetrics || metrics.total_customers !== null) && (
         <Card className="@container/card">
           <CardHeader>
-            <CardDescription>Total Customers</CardDescription>
+            <CardDescription>Total Users</CardDescription>
               {isLoadingMetrics ? (
                 <Skeleton className="h-8 w-32" />
               ) : metrics.total_customers !== null ? (
@@ -264,7 +264,7 @@ export default function DashboardPage() {
               ) : null}
           </CardHeader>
             <CardFooter className="text-xs text-muted-foreground">
-              Across all businesses
+              System Users
           </CardFooter>
         </Card>
         )}

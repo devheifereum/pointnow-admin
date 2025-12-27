@@ -135,7 +135,7 @@ export default function CustomersPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch customer metrics')
+        throw new Error(data.message || 'Failed to fetch user metrics')
       }
 
       if (data.data) {
@@ -144,7 +144,7 @@ export default function CustomersPage() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
       setError(errorMessage)
-      toast.error('Failed to load customer metrics', {
+      toast.error('Failed to load user metrics', {
         description: errorMessage,
       })
     } finally {
@@ -187,7 +187,7 @@ export default function CustomersPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch customers')
+        throw new Error(data.message || 'Failed to fetch users')
       }
 
       if (data.data) {
@@ -196,7 +196,7 @@ export default function CustomersPage() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
       setError(errorMessage)
-      toast.error('Failed to load customers', {
+      toast.error('Failed to load users', {
         description: errorMessage,
       })
     } finally {
@@ -269,9 +269,9 @@ export default function CustomersPage() {
       {/* Date Range Filter at Top */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Customers</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Users</h2>
           <p className="text-muted-foreground text-sm">
-            View and manage all customers across businesses
+            View and manage all users across businesses
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -306,7 +306,7 @@ export default function CustomersPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="@container/card">
           <CardHeader className="pb-2">
-            <CardDescription>Total Customers</CardDescription>
+            <CardDescription>Total Users</CardDescription>
             {isLoadingMetrics ? (
               <Skeleton className="h-8 w-32" />
             ) : (
@@ -316,7 +316,7 @@ export default function CustomersPage() {
             )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
-            System-wide customers
+            System-wide users
           </CardFooter>
         </Card>
 
@@ -332,7 +332,7 @@ export default function CustomersPage() {
             )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
-            Active in last 7 days
+            Active users in last 7 days
           </CardFooter>
         </Card>
 
@@ -348,13 +348,13 @@ export default function CustomersPage() {
             )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
-            Active in last 30 days
+            Active users in last 30 days
           </CardFooter>
         </Card>
 
         <Card className="@container/card">
           <CardHeader className="pb-2">
-            <CardDescription>New Customers</CardDescription>
+            <CardDescription>New Users</CardDescription>
             {isLoadingMetrics ? (
               <Skeleton className="h-8 w-32" />
             ) : (
@@ -364,7 +364,7 @@ export default function CustomersPage() {
             )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
-            New in last month
+            New users in last month
           </CardFooter>
         </Card>
       </div>
@@ -374,8 +374,8 @@ export default function CustomersPage() {
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>All Customers</CardTitle>
-              <CardDescription>View customers across all businesses</CardDescription>
+              <CardTitle>All Users</CardTitle>
+              <CardDescription>View users across all businesses</CardDescription>
             </div>
             {hasActiveFilters && (
               <Button variant="outline" size="sm" onClick={clearAllFilters}>
@@ -455,7 +455,7 @@ export default function CustomersPage() {
                   ) : filteredCustomers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={9} className="h-24 text-center">
-                        No customers found.
+                        No users found.
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -511,7 +511,7 @@ export default function CustomersPage() {
           {customersData && (
             <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
-                Showing {filteredCustomers.length} of {customersData.metadata.total} customers
+                Showing {filteredCustomers.length} of {customersData.metadata.total} users
                 {customersData.metadata.total_pages > 1 && (
                   <span> (Page {customersData.metadata.page} of {customersData.metadata.total_pages})</span>
                 )}

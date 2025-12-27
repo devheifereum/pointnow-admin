@@ -46,8 +46,8 @@ interface Charge {
   amount: number
   amount_refunded: number
   billing_details: {
-    email: string
-    name: string
+    email: string | null
+    name: string | null
   }
   created: number
   currency: string
@@ -206,10 +206,11 @@ export default function RevenuePage() {
     if (!charges?.charges) return []
     
     return charges.charges.filter((charge) => {
+      const searchLower = searchQuery.toLowerCase()
       const matchesSearch = 
-        charge.billing_details.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        charge.billing_details.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        charge.id.toLowerCase().includes(searchQuery.toLowerCase())
+        (charge.billing_details.name?.toLowerCase().includes(searchLower) ?? false) ||
+        (charge.billing_details.email?.toLowerCase().includes(searchLower) ?? false) ||
+        charge.id.toLowerCase().includes(searchLower)
       
       const matchesStatus = statusFilter === "all" || charge.status === statusFilter
       
@@ -318,7 +319,7 @@ export default function RevenuePage() {
         {/* Total Customers */}
         <Card className="@container/card">
           <CardHeader className="pb-2">
-            <CardDescription>Total Customers</CardDescription>
+            <CardDescription>Total Business Customers</CardDescription>
             {isLoadingMetrics ? (
               <Skeleton className="h-8 w-32" />
             ) : (
@@ -328,7 +329,7 @@ export default function RevenuePage() {
             )}
           </CardHeader>
           <CardFooter className="text-xs text-muted-foreground">
-            Total number of customers
+            Businesses that pay for subscriptions
           </CardFooter>
         </Card>
 
@@ -434,8 +435,8 @@ export default function RevenuePage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-medium">{charge.billing_details.name}</span>
-                            <span className="text-xs text-muted-foreground">{charge.billing_details.email}</span>
+                            <span className="font-medium">{charge.billing_details.name || 'N/A'}</span>
+                            <span className="text-xs text-muted-foreground">{charge.billing_details.email || 'N/A'}</span>
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">
